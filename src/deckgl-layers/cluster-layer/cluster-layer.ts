@@ -23,6 +23,7 @@ import {_AggregationLayer as AggregationLayer} from '@deck.gl/aggregation-layers
 
 import geoViewport from '@mapbox/geo-viewport';
 import CPUAggregator, {
+  AggregationType,
   defaultColorDimension,
   DimensionType,
   getDimensionScale
@@ -37,6 +38,8 @@ import ClusterBuilder, {getGeoJSON} from '../layer-utils/cluster-utils';
 import {RGBAColor} from '../../reducers';
 import {AggregationLayerProps} from '@deck.gl/aggregation-layers/aggregation-layer';
 
+type ClusterCPUAggregator = CPUAggregator & {state: {geoJSON; clusterBuilder: ClusterBuilder}};
+
 const defaultRadius = LAYER_VIS_CONFIGS.clusterRadius.defaultValue;
 const defaultRadiusRange = LAYER_VIS_CONFIGS.clusterRadiusRange.defaultValue;
 
@@ -44,7 +47,7 @@ const defaultGetColorValue = points => points.length;
 const defaultGetRadiusValue = cell =>
   cell.filteredPoints ? cell.filteredPoints.length : cell.points.length;
 
-function processGeoJSON(step, props, aggregation, {viewport}) {
+function processGeoJSON(this: ClusterCPUAggregator, step, props, aggregation, {viewport}) {
   const {data, getPosition, filterData} = props;
   const geoJSON = getGeoJSON(data, getPosition, filterData);
   const clusterBuilder = new ClusterBuilder();
@@ -52,7 +55,7 @@ function processGeoJSON(step, props, aggregation, {viewport}) {
   this.setState({geoJSON, clusterBuilder});
 }
 
-function getClusters(step, props, aggregation, {viewport}) {
+function getClusters(this: ClusterCPUAggregator, step, props, aggregation, {viewport}) {
   const {geoJSON, clusterBuilder} = this.state;
   const {clusterRadius, zoom, width, height} = props;
   const {longitude, latitude} = viewport;
@@ -74,7 +77,7 @@ function getSubLayerRadius(dimensionState, dimension, layerProps) {
   };
 }
 
-export const clusterAggregation = {
+export const clusterAggregation: AggregationType = {
   key: 'position',
   updateSteps: [
     {
@@ -112,7 +115,7 @@ export const clusterAggregation = {
   ]
 };
 
-function getRadiusValueDomain(step, props, dimensionUpdater) {
+function getRadiusValueDomain(this: CPUAggregator, step, props, dimensionUpdater) {
   const {key} = dimensionUpdater;
   const {getRadiusValue} = props;
   const {layerData} = this.state;
@@ -228,6 +231,7 @@ export default class ClusterLayer extends AggregationLayer<
     const updateTriggers = this._getSublayerUpdateTriggers();
     const accessors = this._getSubLayerAccessors();
 
+    // @ts-expect-error
     const distanceScale = getDistanceScales(this.context.viewport);
     const metersPerPixel = distanceScale.metersPerPixel[0];
 
