@@ -32,6 +32,7 @@ import {replaceMapControl} from './factories/map-control';
 import {replacePanelHeader} from './factories/panel-header';
 import {AUTH_TOKENS} from './constants/default-settings';
 import {messages} from './constants/localization';
+import KeplerGlSchema from 'kepler.gl/schemas';
 
 import {
   loadRemoteMap,
@@ -62,6 +63,8 @@ import sampleIconCsv, {config as savedMapConfig} from './data/sample-icon-csv';
 
 import {processCsvData, processGeojson} from 'kepler.gl/processors';
 /* eslint-enable no-unused-vars */
+
+console.log('Starting demo app.');
 
 const BannerHeight = 48;
 const BannerKey = `banner-${FormLink}`;
@@ -103,7 +106,14 @@ class App extends Component {
     height: window.innerHeight
   };
 
+  constructor(...props) {
+    super(...props);
+    this._updateData = this._updateData.bind(this);
+  }
+
   componentDidMount() {
+    window.app = this;
+
     // if we pass an id as part of the url
     // we ry to fetch along map configurations
     const {params: {id, provider} = {}, location: {query = {}} = {}} = this.props;
@@ -405,9 +415,61 @@ class App extends Component {
               )}
             </AutoSizer>
           </div>
+          <button
+            style={{position: 'fixed', bottom: '5px', right: '5px'}}
+            onClick={this._updateData}
+          >
+            Update data
+          </button>
         </GlobalStyle>
       </ThemeProvider>
     );
+  }
+
+  _updateData() {
+    console.log('Updating data');
+
+    const {datasets} = this.props.demo.keplerGl.map.visState;
+    const data = datasets[Object.keys(datasets)];
+
+    console.log({data});
+
+    // // Use processCsvData helper to convert csv file into kepler.gl structure {fields, rows}
+    // const data = Processors.processCsvData(nycTripsSubset);
+    // // Create dataset structure
+    // const dataset = {
+    //   data,
+    //   info: {
+    //     id: 'my_data'
+    //     // this is used to match the dataId defined in nyc-config.json. For more details see API documentation.
+    //     // It is paramount that this id mathces your configuration otherwise the configuration file will be ignored.
+    //   }
+    // };
+
+    // read the current configuration
+    const config = this._getMapConfig();
+
+    // addDataToMap action to inject dataset into kepler.gl instance
+    this.props.dispatch(
+      addDataToMap({
+        datasets: {
+          info: {
+            label: 'Sample Taxi Trips in New York City',
+            id: 'test_trip_data'
+          },
+          data
+        },
+        config
+      })
+    );
+  }
+
+  _getMapConfig() {
+    const {map} = this.props.demo.keplerGl;
+    console.log({map});
+
+    // create the config object
+    return KeplerGlSchema.getConfigToSave(map);
   }
 }
 

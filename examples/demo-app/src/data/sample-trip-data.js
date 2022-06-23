@@ -46,6 +46,7 @@ export const testCsvData = `gps_data.utc_timestamp,gps_data.lat,gps_data.lng,gps
 2016-09-17 00:30:08,30.0610977,31.2194728,driver_gps,1472774400000,True,,2016-09-23T08:00:00.000Z,,,,https://d1a3f4spazzrp4.cloudfront.net/kepler.gl/icon-demo-map.jpg,http://kepler.gl
 `;
 
+// TODO: Use this as reference for `data` field
 export default {
   fields: [
     {
