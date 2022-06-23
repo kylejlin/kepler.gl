@@ -37,7 +37,7 @@ const StyledSideBarContainer = styled.div`
 const StyledCloseButton = styled.div`
   align-items: center;
   justify-content: center;
-  background-color: ${props => props.theme.primaryBtnBgd};
+  background-color: ${props => (true ? 'red' : props.theme.primaryBtnBgd)};
   color: ${props => props.theme.primaryBtnColor};
   display: flex;
   height: 46px;
