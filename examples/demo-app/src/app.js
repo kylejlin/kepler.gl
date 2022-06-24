@@ -106,6 +106,8 @@ class App extends Component {
     height: window.innerHeight
   };
 
+  datasets = {};
+
   constructor(...props) {
     super(...props);
     this._updateData = this._updateData.bind(this);

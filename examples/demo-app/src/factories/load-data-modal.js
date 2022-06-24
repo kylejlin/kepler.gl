@@ -29,6 +29,8 @@ import {loadRemoteMap, loadSample, loadSampleConfigurations} from '../actions';
 import {processCsvData, processGeojson} from 'kepler.gl/processors';
 import {addDataToMap} from 'kepler.gl/actions';
 
+let datasetIdCounter = 0;
+
 const CustomLoadDataModalFactory = (...deps) => {
   const LoadDataModal = LoadDataModalFactory(...deps);
   const defaultLoadingMethods = LoadDataModal.defaultProps.loadingMethods;
@@ -57,6 +59,8 @@ const CustomLoadDataModalFactory = (...deps) => {
           const fr = new FileReader();
           console.log({file});
 
+          // TODO: Update progress bar as the file is loading.
+
           fr.addEventListener('load', () => {
             const fileContent = fr.result;
             let data = undefined;
@@ -71,22 +75,27 @@ const CustomLoadDataModalFactory = (...deps) => {
 
             console.log({uploadedData: data});
 
+            const datasetId = `${Date.now().toString(16)}_${datasetIdCounter}`;
+            ++datasetIdCounter;
+
             window.app.props.dispatch(
               addDataToMap({
                 datasets: {
                   info: {
                     label: file.name,
-                    id: Date.now().toString(16)
+                    id: datasetId
                   },
                   data
                 }
-                // options: {
-                //   centerMap: true,
-                //   readOnly: false
-                // },
-                // config: sampleTripDataConfig
               })
             );
+
+            window.app.datasets[datasetId] = {
+              id: datasetId,
+              label: file.name,
+              raw: fileContent,
+              processed: data
+            };
           });
 
           fr.readAsText(file);
