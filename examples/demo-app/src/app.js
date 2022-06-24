@@ -32,7 +32,6 @@ import {replaceMapControl} from './factories/map-control';
 import {replacePanelHeader} from './factories/panel-header';
 import {AUTH_TOKENS} from './constants/default-settings';
 import {messages} from './constants/localization';
-import KeplerGlSchema from 'kepler.gl/schemas';
 
 import {
   loadRemoteMap,
@@ -43,6 +42,8 @@ import {
 
 import {loadCloudMap, addDataToMap, addNotification} from 'kepler.gl/actions';
 import {CLOUD_PROVIDERS} from './cloud-providers';
+
+import {h3IsValid} from 'h3-js';
 
 const KeplerGl = require('kepler.gl/components').injectComponents([
   replaceLoadDataModal(),
@@ -100,18 +101,23 @@ const GlobalStyle = styled.div`
 `;
 
 class App extends Component {
+  constructor(...props) {
+    super(...props);
+    this._openDataAggregrationModal = this._openDataAggregrationModal.bind(this);
+    this._aggregateData = this._aggregateData.bind(this);
+    this._onSelectBaseDataset = this._onSelectBaseDataset.bind(this);
+  }
+
   state = {
     showBanner: false,
     width: window.innerWidth,
-    height: window.innerHeight
+    height: window.innerHeight,
+    datasets: {},
+    dataAggregationModal: {
+      isOpen: false,
+      baseSetId: undefined
+    }
   };
-
-  datasets = {};
-
-  constructor(...props) {
-    super(...props);
-    this._updateData = this._updateData.bind(this);
-  }
 
   componentDidMount() {
     window.app = this;
@@ -369,6 +375,25 @@ class App extends Component {
     }
   };
 
+  _openDataAggregrationModal() {
+    this.setState(prevState => ({
+      ...prevState,
+      dataAggregationModal: {...prevState.dataAggregationModal, isOpen: true}
+    }));
+  }
+
+  _aggregateData() {
+    // TODO
+  }
+
+  _onSelectBaseDataset(e) {
+    const datasetId = e.target.value;
+    this.setState(prevState => ({
+      ...prevState,
+      dataAggregationModal: {...prevState.dataAggregationModal, baseSetId: datasetId}
+    }));
+  }
+
   render() {
     return (
       <ThemeProvider theme={theme}>
@@ -419,60 +444,53 @@ class App extends Component {
           </div>
           <button
             style={{position: 'fixed', bottom: '5px', right: '5px'}}
-            onClick={this._updateData}
+            onClick={this._openDataAggregrationModal}
           >
-            Update data
+            Aggregate data
           </button>
+          {Object.values(this.state.datasets).filter(isH3).length > 0 && (
+            <section
+              style={{
+                display: this.state.dataAggregationModal.isOpen ? undefined : 'none',
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                backgroundColor: '#ccc',
+                zIndex: 1000
+              }}
+            >
+              Select base dataset (must be h3):
+              <select
+                value={
+                  this.state.dataAggregationModal.baseSetId ??
+                  Object.values(this.state.datasets)[0].id
+                }
+                onChange={this._onSelectBaseDataset}
+              >
+                {Object.values(this.state.datasets)
+                  .filter(isH3)
+                  .map(dataset => (
+                    <option key={dataset.id} value={dataset.id}>
+                      {dataset.label}
+                    </option>
+                  ))}
+              </select>
+              <button onClick={this._aggregateData}>Aggregate data</button>
+            </section>
+          )}
         </GlobalStyle>
       </ThemeProvider>
     );
   }
+}
 
-  _updateData() {
-    console.log('Updating data');
-
-    const {datasets} = this.props.demo.keplerGl.map.visState;
-    const data = datasets[Object.keys(datasets)];
-
-    console.log({data});
-
-    // // Use processCsvData helper to convert csv file into kepler.gl structure {fields, rows}
-    // const data = Processors.processCsvData(nycTripsSubset);
-    // // Create dataset structure
-    // const dataset = {
-    //   data,
-    //   info: {
-    //     id: 'my_data'
-    //     // this is used to match the dataId defined in nyc-config.json. For more details see API documentation.
-    //     // It is paramount that this id mathces your configuration otherwise the configuration file will be ignored.
-    //   }
-    // };
-
-    // read the current configuration
-    const config = this._getMapConfig();
-
-    // addDataToMap action to inject dataset into kepler.gl instance
-    this.props.dispatch(
-      addDataToMap({
-        datasets: {
-          info: {
-            label: 'Sample Taxi Trips in New York City',
-            id: 'test_trip_data'
-          },
-          data
-        },
-        config
-      })
-    );
-  }
-
-  _getMapConfig() {
-    const {map} = this.props.demo.keplerGl;
-    console.log({map});
-
-    // create the config object
-    return KeplerGlSchema.getConfigToSave(map);
-  }
+function isH3(dataset) {
+  return dataset.processed.fields.some(
+    field =>
+      field.name === 'h3_id' ||
+      field.name === 'hexagon_id' ||
+      (field.name.includes('h3') && h3IsValid(dataset.processed.rows[0][field.fieldIdx]))
+  );
 }
 
 const mapStateToProps = state => state;

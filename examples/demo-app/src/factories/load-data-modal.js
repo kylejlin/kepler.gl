@@ -90,12 +90,18 @@ const CustomLoadDataModalFactory = (...deps) => {
               })
             );
 
-            window.app.datasets[datasetId] = {
-              id: datasetId,
-              label: file.name,
-              raw: fileContent,
-              processed: data
-            };
+            window.app.setState(prevState => ({
+              ...prevState,
+              datasets: {
+                ...prevState.datasets,
+                [datasetId]: {
+                  id: datasetId,
+                  label: file.name,
+                  raw: fileContent,
+                  processed: data
+                }
+              }
+            }));
           });
 
           fr.readAsText(file);
