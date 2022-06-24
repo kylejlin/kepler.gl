@@ -26,6 +26,9 @@ import LoadRemoteMap from '../components/load-data-modal/load-remote-map';
 import SampleMapsTab from '../components/load-data-modal/sample-maps-tab';
 import {loadRemoteMap, loadSample, loadSampleConfigurations} from '../actions';
 
+import {processCsvData, processGeojson} from 'kepler.gl/processors';
+import {addDataToMap} from 'kepler.gl/actions';
+
 const CustomLoadDataModalFactory = (...deps) => {
   const LoadDataModal = LoadDataModalFactory(...deps);
   const defaultLoadingMethods = LoadDataModal.defaultProps.loadingMethods;
@@ -42,12 +45,67 @@ const CustomLoadDataModalFactory = (...deps) => {
       tabElementType: SampleMapsTab
     }
   };
+  const FileUpload = defaultLoadingMethods.find(lm => lm.id === 'upload').elementType;
+  const CustomFileUpload = (props, ...rest) => {
+    console.log({props: {...props}, rest});
+    return FileUpload({
+      ...props,
+      onFileUpload: (...args) => {
+        console.log('intercepted', args);
+        const files = args[0];
+        files.forEach(file => {
+          const fr = new FileReader();
+          console.log({file});
+
+          fr.addEventListener('load', () => {
+            const fileContent = fr.result;
+            let data = undefined;
+            if (file.name.endsWith('.csv')) {
+              data = processCsvData(fileContent);
+            } else if (file.name.endsWith('.json')) {
+              data = processGeojson(JSON.parse(fileContent));
+            } else {
+              window.alert('Unsupported file extension. File name: ' + file.name);
+              throw new Error('Unsupported file extension. File name: ' + file.name);
+            }
+
+            console.log({uploadedData: data});
+
+            window.app.props.dispatch(
+              addDataToMap({
+                datasets: {
+                  info: {
+                    label: file.name,
+                    id: Date.now().toString(16)
+                  },
+                  data
+                }
+                // options: {
+                //   centerMap: true,
+                //   readOnly: false
+                // },
+                // config: sampleTripDataConfig
+              })
+            );
+          });
+
+          fr.readAsText(file);
+        });
+
+        // props.onFileUpload(...args);
+      }
+    });
+  };
 
   // add more loading methods
   LoadDataModal.defaultProps = {
     ...LoadDataModal.defaultProps,
     loadingMethods: [
-      defaultLoadingMethods.find(lm => lm.id === 'upload'),
+      {
+        id: LOADING_METHODS.upload,
+        label: 'modal.loadData.upload',
+        elementType: CustomFileUpload
+      },
       additionalMethods.remote,
       defaultLoadingMethods.find(lm => lm.id === 'storage'),
       additionalMethods.sample
