@@ -487,9 +487,8 @@ class App extends Component {
 function isH3(dataset) {
   return dataset.processed.fields.some(
     field =>
-      field.name === 'h3_id' ||
-      field.name === 'hexagon_id' ||
-      (field.name.includes('h3') && h3IsValid(dataset.processed.rows[0][field.fieldIdx]))
+      (field.name.includes('h3') || field.name.includes('hex')) &&
+      h3IsValid(dataset.processed.rows[0][field.fieldIdx])
   );
 }
 
