@@ -545,3 +545,9 @@ const mapStateToProps = state => state;
 const dispatchToProps = dispatch => ({dispatch});
 
 export default connect(mapStateToProps, dispatchToProps)(App);
+
+// Notes:
+// app.props.demo.keplerGl.map.visState.layers[number].config.columns['lat' | 'lng' | ...]
+// - Point: lat, lng
+// - Hex: hex_id
+// - TODO: Support more layer types in the future
