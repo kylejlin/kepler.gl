@@ -487,6 +487,18 @@ class App extends Component {
     );
   }
 
+  _onReplaceOtherLayerId(oldId, newId) {
+    this.setState(prevState => ({
+      ...prevState,
+      dataAggregationModal: {
+        ...prevState.dataAggregationModal,
+        otherLayerIds: prevState.dataAggregationModal.otherLayerIds.map(id =>
+          id === oldId ? newId : id
+        )
+      }
+    }));
+  }
+
   render() {
     return (
       <ThemeProvider theme={theme}>
@@ -580,7 +592,10 @@ class App extends Component {
                       return (
                         <li>
                           <button onClick={() => window.alert('TODO')}>Remove</button>{' '}
-                          <select value={layer.id} onChange={() => window.alert('TODO onChange')}>
+                          <select
+                            value={layer.id}
+                            onChange={e => this._onReplaceOtherLayerId(layer.id, e.target.value)}
+                          >
                             {this._getLayers()
                               .filter(this._isValidUnusedOtherLayer)
                               .concat([layer])
