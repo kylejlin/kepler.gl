@@ -32,6 +32,7 @@ import {replaceMapControl} from './factories/map-control';
 import {replacePanelHeader} from './factories/panel-header';
 import {AUTH_TOKENS} from './constants/default-settings';
 import {messages} from './constants/localization';
+import {KeplerGlLayers} from 'kepler.gl/layers';
 
 import {
   loadRemoteMap,
@@ -105,7 +106,7 @@ class App extends Component {
     super(...props);
     this._openDataAggregrationModal = this._openDataAggregrationModal.bind(this);
     this._aggregateData = this._aggregateData.bind(this);
-    this._onSelectBaseDataset = this._onSelectBaseDataset.bind(this);
+    this._onSelectBaseLayer = this._onSelectBaseLayer.bind(this);
   }
 
   state = {
@@ -115,7 +116,7 @@ class App extends Component {
     datasets: {},
     dataAggregationModal: {
       isOpen: false,
-      baseSetId: undefined
+      baseLayerId: undefined
     }
   };
 
@@ -381,22 +382,22 @@ class App extends Component {
       dataAggregationModal: {
         ...prevState.dataAggregationModal,
         isOpen: true,
-        baseSetId: Object.values(prevState.datasets)[0].id
+        baseLayerId: this._getLayers()[0].id
       }
     }));
   }
 
   _aggregateData() {
-    const {baseSetId} = this.state.dataAggregationModal;
-    const baseSet = this.state.datasets[baseSetId];
+    const {baseLayerId} = this.state.dataAggregationModal;
+    const baseLayer = this._getLayers().find(layer => layer.id === baseLayerId);
+    // TODO
+    const baseSet = this.state.datasets[baseLayer.config.dataId];
     if (baseSet === undefined) {
       throw new Error('No base set is selected.');
     }
-    const otherSets = Object.values(this.state.datasets).filter(
-      dataset => dataset.id !== baseSetId
-    );
+    const otherSets = [];
+    console.log('TODO otherSets');
     const newBaseSet = aggregateData(baseSet, otherSets);
-    console.log({newBaseSet});
 
     this.props.dispatch(
       addDataToMap({
@@ -416,12 +417,16 @@ class App extends Component {
     }));
   }
 
-  _onSelectBaseDataset(e) {
-    const datasetId = e.target.value;
+  _onSelectBaseLayer(e) {
+    const layerId = e.target.value;
     this.setState(prevState => ({
       ...prevState,
-      dataAggregationModal: {...prevState.dataAggregationModal, baseSetId: datasetId}
+      dataAggregationModal: {...prevState.dataAggregationModal, baseLayerId: layerId}
     }));
+  }
+
+  _getLayers() {
+    return this.props.demo.keplerGl.map?.visState?.layers ?? [];
   }
 
   render() {
@@ -475,11 +480,11 @@ class App extends Component {
           <button
             style={{position: 'fixed', bottom: '5px', right: '5px'}}
             onClick={this._openDataAggregrationModal}
-            disabled={Object.values(this.state.datasets).filter(isH3).length === 0}
+            disabled={this._getLayers().filter(isLayerH3).length === 0}
           >
             Aggregate data
           </button>
-          {Object.values(this.state.datasets).filter(isH3).length > 0 && (
+          {this._getLayers().filter(isLayerH3).length > 0 && (
             <section
               style={{
                 display: this.state.dataAggregationModal.isOpen ? undefined : 'none',
@@ -490,16 +495,16 @@ class App extends Component {
                 zIndex: 1000
               }}
             >
-              Select base dataset (must be h3):
+              Select base layer (must be h3):
               <select
-                value={this.state.dataAggregationModal.baseSetId}
-                onChange={this._onSelectBaseDataset}
+                value={this.state.dataAggregationModal.baseLayerId}
+                onChange={this._onSelectBaseLayer}
               >
-                {Object.values(this.state.datasets)
-                  .filter(isH3)
-                  .map(dataset => (
-                    <option key={dataset.id} value={dataset.id}>
-                      {dataset.label}
+                {this._getLayers()
+                  .filter(isLayerH3)
+                  .map(layer => (
+                    <option key={layer.id} value={layer.id}>
+                      {layer.config.label}
                     </option>
                   ))}
               </select>
@@ -533,12 +538,16 @@ function aggregateData(baseSet, otherSets) {
   };
 }
 
-function isH3(dataset) {
+function isDatasetH3(dataset) {
   return dataset.processed.fields.some(
     field =>
       (field.name.includes('h3') || field.name.includes('hex')) &&
       h3IsValid(dataset.processed.rows[0][field.fieldIdx])
   );
+}
+
+function isLayerH3(layer) {
+  return layer instanceof KeplerGlLayers.H3Layer;
 }
 
 const mapStateToProps = state => state;
@@ -548,6 +557,7 @@ export default connect(mapStateToProps, dispatchToProps)(App);
 
 // Notes:
 // app.props.demo.keplerGl.map.visState.layers[number].config.columns['lat' | 'lng' | ...]
+// app.props.demo.keplerGl.map.visState.layers[number].config.label
 // - Point: lat, lng
 // - Hex: hex_id
 // - TODO: Support more layer types in the future
