@@ -113,6 +113,7 @@ class App extends Component {
     this._aggregateData = this._aggregateData.bind(this);
     this._onSelectBaseLayer = this._onSelectBaseLayer.bind(this);
     this._addOtherLayer = this._addOtherLayer.bind(this);
+    this._isValidUnusedOtherLayer = this._isValidUnusedOtherLayer.bind(this);
   }
 
   state = {
@@ -468,7 +469,22 @@ class App extends Component {
   }
 
   _addOtherLayer() {
-    window.alert('TODO addOtherLayer');
+    const unusedLayer = this._getLayers().find(this._isValidUnusedOtherLayer);
+    this.setState(prevState => ({
+      ...prevState,
+      dataAggregationModal: {
+        ...prevState.dataAggregationModal,
+        otherLayerIds: prevState.dataAggregationModal.otherLayerIds.concat([unusedLayer.id])
+      }
+    }));
+  }
+
+  _isValidUnusedOtherLayer(layer) {
+    return (
+      !this.state.dataAggregationModal.otherLayerIds.includes(layer.id) &&
+      layer.id !== this.state.dataAggregationModal.baseLayerId &&
+      isSupportedLayerType(layer)
+    );
   }
 
   render() {
@@ -537,40 +553,43 @@ class App extends Component {
                 zIndex: 1000
               }}
             >
-              Select base layer (must be h3):
-              <select
-                value={this.state.dataAggregationModal.baseLayerId}
-                onChange={this._onSelectBaseLayer}
-              >
-                {this._getLayers()
-                  .filter(isLayerH3)
-                  .map(layer => (
-                    <option key={layer.id} value={layer.id}>
-                      {layer.config.label}
-                    </option>
-                  ))}
-              </select>
-              Other layers:
-              <ul>
-                {this.state.dataAggregationModal.otherLayerIds.map(layerId => (
-                  <li>
-                    <button onClick={() => window.alert('TODO')}>Remove</button>
-                    {this._getLayers().find(l => l.id === layerId).config.label}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={this._addOtherLayer}
-                disabled={
-                  !this._getLayers().some(
-                    layer =>
-                      !this.state.dataAggregationModal.otherLayerIds.includes(layer.id) &&
-                      layer.id !== this.state.dataAggregationModal.baseLayerId
-                  )
-                }
-              >
-                Add layer
-              </button>
+              <section>
+                Select base layer (must be h3):
+                <select
+                  value={this.state.dataAggregationModal.baseLayerId}
+                  onChange={this._onSelectBaseLayer}
+                >
+                  {this._getLayers()
+                    .filter(isLayerH3)
+                    .map(layer => (
+                      <option key={layer.id} value={layer.id}>
+                        {layer.config.label}
+                      </option>
+                    ))}
+                </select>
+              </section>
+
+              <section>
+                Other layers:{' '}
+                {this.state.dataAggregationModal.otherLayerIds.length === 0 ? (
+                  <span>None</span>
+                ) : (
+                  <ul>
+                    {this.state.dataAggregationModal.otherLayerIds.map(layerId => (
+                      <li>
+                        <button onClick={() => window.alert('TODO')}>Remove</button>
+                        {this._getLayers().find(l => l.id === layerId).config.label}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <button
+                  onClick={this._addOtherLayer}
+                  disabled={!this._getLayers().some(this._isValidUnusedOtherLayer)}
+                >
+                  Add layer
+                </button>
+              </section>
               <button onClick={this._aggregateData}>Aggregate data</button>
             </section>
           )}
@@ -601,13 +620,13 @@ function aggregateData(baseSet, otherSets) {
   };
 }
 
-function isDatasetH3(dataset) {
-  return dataset.processed.fields.some(
-    field =>
-      (field.name.includes('h3') || field.name.includes('hex')) &&
-      h3IsValid(dataset.processed.rows[0][field.fieldIdx])
-  );
-}
+// function isDatasetH3(dataset) {
+//   return dataset.processed.fields.some(
+//     field =>
+//       (field.name.includes('h3') || field.name.includes('hex')) &&
+//       h3IsValid(dataset.processed.rows[0][field.fieldIdx])
+//   );
+// }
 
 function isSupportedLayerType(layer) {
   return isLayerH3(layer) || isLayerPointLayer(layer);
