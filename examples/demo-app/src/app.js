@@ -487,6 +487,18 @@ class App extends Component {
     );
   }
 
+  _onRemoveOtherLayerId(idToBeDeleted) {
+    this.setState(prevState => ({
+      ...prevState,
+      dataAggregationModal: {
+        ...prevState.dataAggregationModal,
+        otherLayerIds: prevState.dataAggregationModal.otherLayerIds.filter(
+          id => id !== idToBeDeleted
+        )
+      }
+    }));
+  }
+
   _onReplaceOtherLayerId(oldId, newId) {
     this.setState(prevState => ({
       ...prevState,
@@ -591,7 +603,9 @@ class App extends Component {
                       const layer = this._getLayers().find(l => l.id === layerId);
                       return (
                         <li>
-                          <button onClick={() => window.alert('TODO')}>Remove</button>{' '}
+                          <button onClick={() => this._onRemoveOtherLayerId(layer.id)}>
+                            Remove
+                          </button>{' '}
                           <select
                             value={layer.id}
                             onChange={e => this._onReplaceOtherLayerId(layer.id, e.target.value)}
