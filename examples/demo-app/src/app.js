@@ -391,13 +391,23 @@ class App extends Component {
     const {baseLayerId} = this.state.dataAggregationModal;
     const baseLayer = this._getLayers().find(layer => layer.id === baseLayerId);
     // TODO
-    const baseSet = this.state.datasets[baseLayer.config.dataId];
+    const baseDatasetId = baseLayer.config.dataId;
+    const baseSet = this.state.datasets[baseDatasetId];
     if (baseSet === undefined) {
       throw new Error('No base set is selected.');
     }
     const otherSets = [];
     console.log('TODO otherSets');
     const newBaseSet = aggregateData(baseSet, otherSets);
+
+    // TODO: Replace hack with proper action dispatch
+    const fieldsToShow = this.props.demo.keplerGl.map.visState.interactionConfig.tooltip.config
+      .fieldsToShow[baseDatasetId];
+    if (!fieldsToShow.some(f => f.name === 'TotalRisk')) {
+      this.props.demo.keplerGl.map.visState.interactionConfig.tooltip.config.fieldsToShow[
+        baseDatasetId
+      ] = fieldsToShow.concat([{name: 'TotalRisk', format: null}]);
+    }
 
     this.props.dispatch(
       addDataToMap({
