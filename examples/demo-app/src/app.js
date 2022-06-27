@@ -378,12 +378,42 @@ class App extends Component {
   _openDataAggregrationModal() {
     this.setState(prevState => ({
       ...prevState,
-      dataAggregationModal: {...prevState.dataAggregationModal, isOpen: true}
+      dataAggregationModal: {
+        ...prevState.dataAggregationModal,
+        isOpen: true,
+        baseSetId: Object.values(prevState.datasets)[0].id
+      }
     }));
   }
 
   _aggregateData() {
-    // TODO
+    const {baseSetId} = this.state.dataAggregationModal;
+    const baseSet = this.state.datasets[baseSetId];
+    if (baseSet === undefined) {
+      throw new Error('No base set is selected.');
+    }
+    const otherSets = Object.values(this.state.datasets).filter(
+      dataset => dataset.id !== baseSetId
+    );
+    const newBaseSet = aggregateData(baseSet, otherSets);
+    console.log({newBaseSet});
+
+    this.props.dispatch(
+      addDataToMap({
+        datasets: {
+          info: {
+            label: newBaseSet.label,
+            id: newBaseSet.id
+          },
+          data: newBaseSet.processed
+        }
+      })
+    );
+
+    this.setState(prevState => ({
+      ...prevState,
+      dataAggregationModal: {...prevState.dataAggregationModal, isOpen: false}
+    }));
   }
 
   _onSelectBaseDataset(e) {
@@ -445,6 +475,7 @@ class App extends Component {
           <button
             style={{position: 'fixed', bottom: '5px', right: '5px'}}
             onClick={this._openDataAggregrationModal}
+            disabled={Object.values(this.state.datasets).filter(isH3).length === 0}
           >
             Aggregate data
           </button>
@@ -461,10 +492,7 @@ class App extends Component {
             >
               Select base dataset (must be h3):
               <select
-                value={
-                  this.state.dataAggregationModal.baseSetId ??
-                  Object.values(this.state.datasets)[0].id
-                }
+                value={this.state.dataAggregationModal.baseSetId}
                 onChange={this._onSelectBaseDataset}
               >
                 {Object.values(this.state.datasets)
@@ -482,6 +510,27 @@ class App extends Component {
       </ThemeProvider>
     );
   }
+}
+
+function aggregateData(baseSet, otherSets) {
+  const newBaseSetData = {
+    fields: baseSet.processed.fields.concat([
+      {
+        analyzerType: 'FLOAT',
+        displayName: 'TotalRisk',
+        fieldIdx: baseSet.processed.fields.length,
+        format: '',
+        id: 'TotalRisk',
+        name: 'TotalRisk',
+        type: 'real'
+      }
+    ]),
+    rows: baseSet.processed.rows.map(row => row.concat([0.12345]))
+  };
+  return {
+    ...baseSet,
+    processed: newBaseSetData
+  };
 }
 
 function isH3(dataset) {
