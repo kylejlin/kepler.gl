@@ -575,14 +575,26 @@ class App extends Component {
                   <span>None</span>
                 ) : (
                   <ul>
-                    {this.state.dataAggregationModal.otherLayerIds.map(layerId => (
-                      <li>
-                        <button onClick={() => window.alert('TODO')}>Remove</button>
-                        {this._getLayers().find(l => l.id === layerId).config.label}
-                      </li>
-                    ))}
+                    {this.state.dataAggregationModal.otherLayerIds.map(layerId => {
+                      const layer = this._getLayers().find(l => l.id === layerId);
+                      return (
+                        <li>
+                          <button onClick={() => window.alert('TODO')}>Remove</button>{' '}
+                          <select value={layer.id} onChange={() => window.alert('TODO onChange')}>
+                            {this._getLayers()
+                              .filter(this._isValidUnusedOtherLayer)
+                              .concat([layer])
+                              .map(optionLayer => (
+                                <option key={optionLayer.id} value={optionLayer.id}>
+                                  {optionLayer.config.label}
+                                </option>
+                              ))}
+                          </select>
+                        </li>
+                      );
+                    })}
                   </ul>
-                )}
+                )}{' '}
                 <button
                   onClick={this._addOtherLayer}
                   disabled={!this._getLayers().some(this._isValidUnusedOtherLayer)}
