@@ -41,8 +41,12 @@ import {
   onLoadCloudMapSuccess
 } from './actions';
 
-import {loadCloudMap, addDataToMap, addNotification} from 'kepler.gl/actions';
-import * as allActions from 'kepler.gl/actions';
+import {
+  loadCloudMap,
+  addDataToMap,
+  addNotification,
+  interactionConfigChange
+} from 'kepler.gl/actions';
 import {CLOUD_PROVIDERS} from './cloud-providers';
 
 import {h3IsValid} from 'h3-js';
@@ -68,8 +72,6 @@ import {processCsvData, processGeojson} from 'kepler.gl/processors';
 /* eslint-enable no-unused-vars */
 
 console.log('Starting demo app.');
-
-console.log({allActions});
 
 const BannerHeight = 48;
 const BannerKey = `banner-${FormLink}`;
@@ -110,6 +112,7 @@ class App extends Component {
     this._openDataAggregrationModal = this._openDataAggregrationModal.bind(this);
     this._aggregateData = this._aggregateData.bind(this);
     this._onSelectBaseLayer = this._onSelectBaseLayer.bind(this);
+    this._addOtherLayer = this._addOtherLayer.bind(this);
   }
 
   state = {
@@ -119,7 +122,8 @@ class App extends Component {
     datasets: {},
     dataAggregationModal: {
       isOpen: false,
-      baseLayerId: undefined
+      baseLayerId: undefined,
+      otherLayerIds: []
     }
   };
 
@@ -380,14 +384,27 @@ class App extends Component {
   };
 
   _openDataAggregrationModal() {
-    this.setState(prevState => ({
-      ...prevState,
-      dataAggregationModal: {
-        ...prevState.dataAggregationModal,
-        isOpen: true,
-        baseLayerId: this._getLayers()[0].id
-      }
-    }));
+    this.setState(prevState => {
+      const baseLayerId = this._getLayers()[0].id;
+      return {
+        ...prevState,
+        dataAggregationModal: {
+          ...prevState.dataAggregationModal,
+          isOpen: true,
+          baseLayerId,
+          otherLayerIds: prevState.dataAggregationModal.otherLayerIds.filter(layerId => {
+            if (layerId === baseLayerId) {
+              return false;
+            }
+            const layer = this._getLayers().find(l => l.id === layerId);
+            if (layer === undefined) {
+              return false;
+            }
+            return isSupportedLayerType(layer);
+          })
+        }
+      };
+    });
   }
 
   _aggregateData() {
@@ -418,7 +435,7 @@ class App extends Component {
       .fieldsToShow[baseDatasetId];
     if (!fieldsToShow.some(f => f.name === 'TotalRisk')) {
       this.props.dispatch(
-        allActions.interactionConfigChange({
+        interactionConfigChange({
           ...this.props.demo.keplerGl.map.visState.interactionConfig.tooltip,
           config: {
             ...this.props.demo.keplerGl.map.visState.interactionConfig.tooltip.config,
@@ -448,6 +465,10 @@ class App extends Component {
 
   _getLayers() {
     return this.props.demo.keplerGl.map?.visState?.layers ?? [];
+  }
+
+  _addOtherLayer() {
+    window.alert('TODO addOtherLayer');
   }
 
   render() {
@@ -529,6 +550,27 @@ class App extends Component {
                     </option>
                   ))}
               </select>
+              Other layers:
+              <ul>
+                {this.state.dataAggregationModal.otherLayerIds.map(layerId => (
+                  <li>
+                    <button onClick={() => window.alert('TODO')}>Remove</button>
+                    {this._getLayers().find(l => l.id === layerId).config.label}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={this._addOtherLayer}
+                disabled={
+                  !this._getLayers().some(
+                    layer =>
+                      !this.state.dataAggregationModal.otherLayerIds.includes(layer.id) &&
+                      layer.id !== this.state.dataAggregationModal.baseLayerId
+                  )
+                }
+              >
+                Add layer
+              </button>
               <button onClick={this._aggregateData}>Aggregate data</button>
             </section>
           )}
@@ -567,8 +609,16 @@ function isDatasetH3(dataset) {
   );
 }
 
+function isSupportedLayerType(layer) {
+  return isLayerH3(layer) || isLayerPointLayer(layer);
+}
+
 function isLayerH3(layer) {
   return layer instanceof KeplerGlLayers.H3Layer;
+}
+
+function isLayerPointLayer(layer) {
+  return layer instanceof KeplerGlLayers.PointLayer;
 }
 
 const mapStateToProps = state => state;
