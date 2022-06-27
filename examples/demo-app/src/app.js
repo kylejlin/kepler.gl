@@ -42,6 +42,7 @@ import {
 } from './actions';
 
 import {loadCloudMap, addDataToMap, addNotification} from 'kepler.gl/actions';
+import * as allActions from 'kepler.gl/actions';
 import {CLOUD_PROVIDERS} from './cloud-providers';
 
 import {h3IsValid} from 'h3-js';
@@ -67,6 +68,8 @@ import {processCsvData, processGeojson} from 'kepler.gl/processors';
 /* eslint-enable no-unused-vars */
 
 console.log('Starting demo app.');
+
+console.log({allActions});
 
 const BannerHeight = 48;
 const BannerKey = `banner-${FormLink}`;
@@ -390,7 +393,6 @@ class App extends Component {
   _aggregateData() {
     const {baseLayerId} = this.state.dataAggregationModal;
     const baseLayer = this._getLayers().find(layer => layer.id === baseLayerId);
-    // TODO
     const baseDatasetId = baseLayer.config.dataId;
     const baseSet = this.state.datasets[baseDatasetId];
     if (baseSet === undefined) {
@@ -399,15 +401,6 @@ class App extends Component {
     const otherSets = [];
     console.log('TODO otherSets');
     const newBaseSet = aggregateData(baseSet, otherSets);
-
-    // TODO: Replace hack with proper action dispatch
-    const fieldsToShow = this.props.demo.keplerGl.map.visState.interactionConfig.tooltip.config
-      .fieldsToShow[baseDatasetId];
-    if (!fieldsToShow.some(f => f.name === 'TotalRisk')) {
-      this.props.demo.keplerGl.map.visState.interactionConfig.tooltip.config.fieldsToShow[
-        baseDatasetId
-      ] = fieldsToShow.concat([{name: 'TotalRisk', format: null}]);
-    }
 
     this.props.dispatch(
       addDataToMap({
@@ -420,6 +413,24 @@ class App extends Component {
         }
       })
     );
+
+    const fieldsToShow = this.props.demo.keplerGl.map.visState.interactionConfig.tooltip.config
+      .fieldsToShow[baseDatasetId];
+    if (!fieldsToShow.some(f => f.name === 'TotalRisk')) {
+      this.props.dispatch(
+        allActions.interactionConfigChange({
+          ...this.props.demo.keplerGl.map.visState.interactionConfig.tooltip,
+          config: {
+            ...this.props.demo.keplerGl.map.visState.interactionConfig.tooltip.config,
+            fieldsToShow: {
+              ...this.props.demo.keplerGl.map.visState.interactionConfig.tooltip.config
+                .fieldsToShow,
+              [baseDatasetId]: fieldsToShow.concat([{name: 'TotalRisk', format: null}])
+            }
+          }
+        })
+      );
+    }
 
     this.setState(prevState => ({
       ...prevState,
