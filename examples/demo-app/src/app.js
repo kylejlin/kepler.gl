@@ -416,9 +416,10 @@ class App extends Component {
     if (baseSet === undefined) {
       throw new Error('No base set is selected.');
     }
-    const otherSets = [];
-    console.log('TODO otherSets');
-    const newBaseSet = aggregateData(baseSet, otherSets);
+    const otherLayers = this._getLayers().filter(layer =>
+      this.state.dataAggregationModal.otherLayerIds.includes(layer.id)
+    );
+    const newBaseSet = aggregateData(baseSet, otherLayers);
 
     this.props.dispatch(
       addDataToMap({
@@ -640,7 +641,8 @@ class App extends Component {
   }
 }
 
-function aggregateData(baseSet, otherSets) {
+function aggregateData(baseSet, otherLayers) {
+  // TODO: Replace dummy implementation with real one
   const newBaseSetData = {
     fields: baseSet.processed.fields.concat([
       {
